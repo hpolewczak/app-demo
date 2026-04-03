@@ -1,3 +1,18 @@
 spring:
   application:
     name: app-demo
+
+  r2dbc:
+    url: r2dbc:postgresql://localhost:5432/demo
+    username: demo_user
+    password: demo_pass
+
+  # JDBC needed for Flyway migrations only
+  datasource:
+    url: jdbc:postgresql://localhost:5432/demo
+    username: demo_user
+    password: demo_pass
+    driver-class-name: org.postgresql.Driver
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
