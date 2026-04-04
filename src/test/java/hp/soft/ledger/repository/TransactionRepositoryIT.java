@@ -1,6 +1,7 @@
 package hp.soft.ledger.repository;
 
 import hp.soft.BaseIntegrationTestIT;
+import hp.soft.payment.dto.PaymentStatus;
 import org.jooq.DSLContext;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,7 +41,7 @@ class TransactionRepositoryIT extends BaseIntegrationTestIT {
                         .set(PAYMENTS.PM_CUSTOMER_ID, UUID.randomUUID())
                         .set(PAYMENTS.PM_MERCHANT_ID, UUID.randomUUID())
                         .set(PAYMENTS.PM_AMOUNT, new BigDecimal("150.00"))
-                        .set(PAYMENTS.PM_STATUS, "CREATED")
+                        .set(PAYMENTS.PM_STATUS, PaymentStatus.CREATED.name())
         ).block();
         return paymentId;
     }

@@ -6,6 +6,7 @@ import hp.soft.account.repository.AccountRepository;
 import hp.soft.account.dto.Account;
 import hp.soft.account.dto.AccountType;
 import hp.soft.ledger.dto.Transaction;
+import hp.soft.payment.dto.PaymentStatus;
 import org.jooq.DSLContext;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -115,7 +116,7 @@ class LedgerLineRepositoryIT extends BaseIntegrationTestIT {
                         .set(PAYMENTS.PM_CUSTOMER_ID, UUID.randomUUID())
                         .set(PAYMENTS.PM_MERCHANT_ID, UUID.randomUUID())
                         .set(PAYMENTS.PM_AMOUNT, new BigDecimal("300.00"))
-                        .set(PAYMENTS.PM_STATUS, "CREATED")
+                        .set(PAYMENTS.PM_STATUS, PaymentStatus.CREATED.name())
         ).block();
 
         Transaction tx = transactionRepository.insert(paymentId, "Test", new BigDecimal("300.00")).block();
