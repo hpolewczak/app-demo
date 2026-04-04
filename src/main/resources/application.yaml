@@ -7,12 +7,9 @@ spring:
     username: demo_user
     password: demo_pass
 
-  # JDBC needed for Flyway migrations only
-  datasource:
-    url: jdbc:postgresql://localhost:5432/demo
-    username: demo_user
-    password: demo_pass
-    driver-class-name: org.postgresql.Driver
+# Flyway uses its own jdbc driver
   flyway:
-    enabled: true
+    url: jdbc:postgresql://localhost:5432/demo
+    user: demo_user
+    password: demo_pass
     locations: classpath:db/migration
