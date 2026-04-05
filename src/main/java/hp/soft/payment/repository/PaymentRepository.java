@@ -36,6 +36,23 @@ public class PaymentRepository {
         ).map(this::toPayment);
     }
 
+    public Mono<Payment> findByIdForUpdate(UUID id) {
+        return Mono.from(
+                dsl.selectFrom(PAYMENTS)
+                        .where(PAYMENTS.PM_ID.eq(id))
+                        .forUpdate()
+        ).map(this::toPayment);
+    }
+
+    public Mono<Payment> updateStatusWithIdempotencyKey(UUID id, PaymentStatus status, String idempotencyKey) {
+        return Mono.from(
+                dsl.update(PAYMENTS)
+                        .set(PAYMENTS.PM_STATUS, status.name())
+                        .set(PAYMENTS.PM_IDEMPOTENCY_KEY, idempotencyKey)
+                        .where(PAYMENTS.PM_ID.eq(id))
+        ).then(findById(id));
+    }
+
     public Mono<Payment> updateStatus(UUID id, PaymentStatus status) {
         return Mono.from(
                 dsl.update(PAYMENTS)

@@ -72,11 +72,11 @@ class PaymentServiceTest {
                 .id(paymentId).customerId(customerId).merchantId(merchantId)
                 .amount(amount).status(PaymentStatus.PAID).createdAt(OffsetDateTime.now()).build();
 
-        when(paymentRepository.findById(paymentId)).thenReturn(Mono.just(payment));
+        when(paymentRepository.findByIdForUpdate(paymentId)).thenReturn(Mono.just(payment));
         when(accountService.findOrCreateCustomerReceivable(customerId)).thenReturn(Mono.just(customerReceivable));
         when(accountService.findZilchCash()).thenReturn(Mono.just(zilchCash));
         when(ledgerService.recordRepayment(eq(paymentId), eq(amount), any(), any())).thenReturn(Mono.empty());
-        when(paymentRepository.updateStatus(paymentId, PaymentStatus.PAID)).thenReturn(Mono.just(paidPayment));
+        when(paymentRepository.updateStatusWithIdempotencyKey(paymentId, PaymentStatus.PAID, "key-1")).thenReturn(Mono.just(paidPayment));
 
         StepVerifier.create(paymentService.payOff(new PayOffRequest(paymentId, "key-1")))
                 .expectNextMatches(p -> p.status() == PaymentStatus.PAID)
@@ -88,7 +88,7 @@ class PaymentServiceTest {
     @Test
     void payOff_failsWhenPaymentNotFound() {
         UUID paymentId = UUID.randomUUID();
-        when(paymentRepository.findById(paymentId)).thenReturn(Mono.empty());
+        when(paymentRepository.findByIdForUpdate(paymentId)).thenReturn(Mono.empty());
 
         StepVerifier.create(paymentService.payOff(new PayOffRequest(paymentId, "key-1")))
                 .expectErrorMatches(e -> e instanceof IllegalArgumentException
@@ -103,7 +103,7 @@ class PaymentServiceTest {
                 .id(paymentId).customerId(customerId).merchantId(merchantId)
                 .amount(amount).status(PaymentStatus.PAID).createdAt(OffsetDateTime.now()).build();
 
-        when(paymentRepository.findById(paymentId)).thenReturn(Mono.just(paidPayment));
+        when(paymentRepository.findByIdForUpdate(paymentId)).thenReturn(Mono.just(paidPayment));
 
         StepVerifier.create(paymentService.payOff(new PayOffRequest(paymentId, "key-1")))
                 .expectErrorMatches(e -> e instanceof IllegalStateException

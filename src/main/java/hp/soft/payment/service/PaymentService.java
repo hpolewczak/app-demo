@@ -42,7 +42,7 @@ public class PaymentService {
 
     @Transactional
     public Mono<Payment> payOff(PayOffRequest request) {
-        return paymentRepository.findById(request.paymentId())
+        return paymentRepository.findByIdForUpdate(request.paymentId())
                 .switchIfEmpty(Mono.error(new IllegalArgumentException("Payment not found: " + request.paymentId())))
                 .flatMap(payment -> {
                     if (payment.status() != PaymentStatus.CREATED) {
@@ -57,7 +57,8 @@ public class PaymentService {
                                     payment.amount(),
                                     accounts.getT1(),
                                     accounts.getT2()
-                            ).then(paymentRepository.updateStatus(payment.id(), PaymentStatus.PAID))
+                            ).then(paymentRepository.updateStatusWithIdempotencyKey(
+                                    payment.id(), PaymentStatus.PAID, request.idempotencyKey()))
                     );
                 });
     }

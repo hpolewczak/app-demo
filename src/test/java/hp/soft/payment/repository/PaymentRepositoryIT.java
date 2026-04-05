@@ -4,12 +4,13 @@ import hp.soft.BaseIntegrationTestIT;
 import hp.soft.payment.dto.PaymentStatus;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.jooq.exception.IntegrityConstraintViolationException;
 import reactor.test.StepVerifier;
 
 import java.math.BigDecimal;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 class PaymentRepositoryIT extends BaseIntegrationTestIT {
     @Autowired
@@ -61,5 +62,54 @@ class PaymentRepositoryIT extends BaseIntegrationTestIT {
                 )
                 .assertNext(p -> assertEquals(PaymentStatus.PAID, p.status()))
                 .verifyComplete();
+    }
+
+    @Test
+    void findByIdForUpdate_returnsPayment() {
+        StepVerifier.create(
+                        paymentRepository.insert(UUID.randomUUID(), UUID.randomUUID(), new BigDecimal("75.00"))
+                                .flatMap(p -> paymentRepository.findByIdForUpdate(p.id()))
+                )
+                .assertNext(p -> {
+                    assertNotNull(p.id());
+                    assertEquals(PaymentStatus.CREATED, p.status());
+                })
+                .verifyComplete();
+    }
+
+    @Test
+    void findByIdForUpdate_returnsEmptyWhenNotFound() {
+        StepVerifier.create(paymentRepository.findByIdForUpdate(UUID.randomUUID()))
+                .verifyComplete();
+    }
+
+    @Test
+    void updateStatusWithIdempotencyKey_setsKeyAndStatus() {
+        String idempotencyKey = "idem-" + UUID.randomUUID();
+
+        StepVerifier.create(
+                        paymentRepository.insert(UUID.randomUUID(), UUID.randomUUID(), new BigDecimal("80.00"))
+                                .flatMap(p -> paymentRepository.updateStatusWithIdempotencyKey(p.id(), PaymentStatus.PAID, idempotencyKey))
+                )
+                .assertNext(p -> {
+                    assertEquals(PaymentStatus.PAID, p.status());
+                    assertEquals(idempotencyKey, p.idempotencyKey());
+                })
+                .verifyComplete();
+    }
+
+    @Test
+    void updateStatusWithIdempotencyKey_rejectsDuplicateKey() {
+        String idempotencyKey = "idem-" + UUID.randomUUID();
+
+        var firstPayment = paymentRepository.insert(UUID.randomUUID(), UUID.randomUUID(), new BigDecimal("60.00"))
+                .flatMap(p -> paymentRepository.updateStatusWithIdempotencyKey(p.id(), PaymentStatus.PAID, idempotencyKey));
+
+        var secondPayment = paymentRepository.insert(UUID.randomUUID(), UUID.randomUUID(), new BigDecimal("70.00"))
+                .flatMap(p -> paymentRepository.updateStatusWithIdempotencyKey(p.id(), PaymentStatus.PAID, idempotencyKey));
+
+        StepVerifier.create(firstPayment.then(secondPayment))
+                .expectError(IntegrityConstraintViolationException.class)
+                .verify();
     }
 }
