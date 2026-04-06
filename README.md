@@ -94,9 +94,6 @@ curl http://localhost:8080/api/v1/report/trial-balance
 # 10 threads, 50 loops each
 jmeter -n -t jmeter/payment-load-test.jmx -l jmeter/results/results.jtl
 
-# 1 minute with 20 threads
-jmeter -n -t jmeter/payment-load-test.jmx -JTHREADS=20 -JLOOPS=-1 -JRAMP_UP=5 \
-  -Jjmeterengine.duration=60 -l jmeter/results/results.jtl
 
 # GUI
 jmeter -t jmeter/payment-load-test.jmx
