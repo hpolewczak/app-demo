@@ -2,7 +2,6 @@ package hp.soft.account.repository;
 
 import hp.soft.account.dto.Account;
 import hp.soft.account.dto.AccountCode;
-import hp.soft.account.dto.AccountType;
 import lombok.RequiredArgsConstructor;
 import org.jooq.DSLContext;
 import org.springframework.stereotype.Repository;
@@ -16,6 +15,7 @@ import static hp.soft.jooq.tables.Accounts.ACCOUNTS;
 @RequiredArgsConstructor
 public class AccountRepository {
     private final DSLContext dsl;
+    private final AccountMapper accountMapper;
 
     public Mono<Account> findByCode(AccountCode code, UUID customerId, UUID merchantId) {
         return Mono.from(
@@ -27,7 +27,7 @@ public class AccountRepository {
                         .and(merchantId != null
                                 ? ACCOUNTS.ACC_MERCHANT_ID.eq(merchantId)
                                 : ACCOUNTS.ACC_MERCHANT_ID.isNull())
-        ).map(this::toAccount);
+        ).map(accountMapper::toAccount);
     }
 
     public Mono<Account> insert(Account account) {
@@ -42,16 +42,5 @@ public class AccountRepository {
                         .onConflict(ACCOUNTS.ACC_CODE, ACCOUNTS.ACC_CUSTOMER_ID, ACCOUNTS.ACC_MERCHANT_ID)
                         .doNothing()
         ).then(findByCode(account.code(), account.customerId(), account.merchantId()));
-    }
-
-    private Account toAccount(hp.soft.jooq.tables.records.AccountsRecord r) {
-        return Account.builder()
-                .id(r.getAccId())
-                .code(AccountCode.valueOf(r.getAccCode()))
-                .name(r.getAccName())
-                .type(AccountType.valueOf(r.getAccType()))
-                .customerId(r.getAccCustomerId())
-                .merchantId(r.getAccMerchantId())
-                .build();
     }
 }
