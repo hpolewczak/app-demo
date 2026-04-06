@@ -44,23 +44,29 @@ public class PaymentService {
     public Mono<Payment> payOff(PayOffRequest request) {
         return paymentRepository.findByIdForUpdate(request.paymentId())
                 .switchIfEmpty(Mono.error(new IllegalArgumentException("Payment not found: " + request.paymentId())))
-                .flatMap(payment -> {
-                    if (payment.status() != PaymentStatus.CREATED) {
-                        return Mono.error(new IllegalStateException("Payment is not in CREATED status: " + payment.status()));
-                    }
-                    return Mono.zip(
-                            accountService.findOrCreateCustomerReceivable(payment.customerId()),
-                            accountService.findZilchCash()
-                    ).flatMap(accounts ->
-                            ledgerService.recordRepayment(
-                                    payment.id(),
-                                    payment.amount(),
-                                    accounts.getT1(),
-                                    accounts.getT2()
-                            ).then(paymentRepository.updateStatusWithIdempotencyKey(
-                                    payment.id(), PaymentStatus.PAID, request.idempotencyKey()))
-                    );
-                });
+                .flatMap(this::ensureCreated)
+                .flatMap(payment -> recordRepayment(payment, request.idempotencyKey()));
+    }
+
+    private Mono<Payment> ensureCreated(Payment payment) {
+        if (payment.status() != PaymentStatus.CREATED) {
+            return Mono.error(new IllegalStateException("Payment is not in CREATED status: " + payment.status()));
+        }
+        return Mono.just(payment);
+    }
+
+    private Mono<Payment> recordRepayment(Payment payment, String idempotencyKey) {
+        return Mono.zip(
+                        accountService.findOrCreateCustomerReceivable(payment.customerId()),
+                        accountService.findZilchCash()
+                )
+                .flatMap(accounts -> ledgerService.recordRepayment(
+                                payment.id(),
+                                payment.amount(),
+                                accounts.getT1(),
+                                accounts.getT2()
+                        ).then(paymentRepository.updateStatusWithIdempotencyKey(
+                                payment.id(), PaymentStatus.PAID, idempotencyKey)));
     }
 
     @Transactional(readOnly = true)
