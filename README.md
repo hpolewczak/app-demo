@@ -29,6 +29,17 @@ Three accounts model the BNPL lifecycle:
 
 Customer and merchant accounts are created on-the-fly when first seen (SELECT-first, INSERT ON CONFLICT pattern).
 
+### Double-Entry Rules
+
+Each ledger entry has a **debit (DR)** and **credit (CR)** side. The effect depends on the account type:
+
+| | DR (debit) | CR (credit) |
+|---|---|---|
+| **Asset** (ZILCH_CASH, CUSTOMER_RECEIVABLE) | increases balance | decreases balance |
+| **Liability** (MERCHANT_PAYABLE) | decreases balance | increases balance |
+
+The fundamental invariant: **Assets = Liabilities + Equity**. Debits increase the left side, credits increase the right side.
+
 ### Purchase (100.00)
 
 ```
@@ -46,6 +57,10 @@ DR CUSTOMER_RECEIVABLE 100    CR MERCHANT_PAYABLE  100
 DR MERCHANT_PAYABLE    100    CR ZILCH_CASH        100
 ```
 
+**Line 1** — CUSTOMER_RECEIVABLE (asset) debited: balance **+100** (customer owes us more). MERCHANT_PAYABLE (liability) credited: balance **+100** (we owe merchant more).
+
+**Line 2** — MERCHANT_PAYABLE (liability) debited: balance **-100** (obligation cleared). ZILCH_CASH (asset) credited: balance **-100** (cash paid out).
+
 ### Pay-off
 
 ```
@@ -58,6 +73,8 @@ DR MERCHANT_PAYABLE    100    CR ZILCH_CASH        100
 ```
 DR ZILCH_CASH          100    CR CUSTOMER_RECEIVABLE 100
 ```
+
+**Pay-off** — ZILCH_CASH (asset) debited: balance **+100** (cash received). CUSTOMER_RECEIVABLE (asset) credited: balance **-100** (customer debt cleared).
 
 After the full cycle, all balances return to zero.
 
@@ -93,7 +110,6 @@ curl http://localhost:8080/api/v1/report/trial-balance
 ```bash
 # 10 threads, 50 loops each
 jmeter -n -t jmeter/payment-load-test.jmx -l jmeter/results/results.jtl
-
 
 # GUI
 jmeter -t jmeter/payment-load-test.jmx
