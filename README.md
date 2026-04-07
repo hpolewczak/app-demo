@@ -108,11 +108,17 @@ curl http://localhost:8080/api/v1/report/trial-balance
 ## JMeter Load Test
 
 ```bash
-# 10 threads, 50 loops each
-jmeter -n -t jmeter/payment-load-test.jmx -l jmeter/results/results.jtl
-
 # GUI
 jmeter -t jmeter/payment-load-test.jmx
+
+# Default: 100 requests/sec                                                                                                                  
+jmeter -n -t jmeter/payment-load-test.jmx -l jmeter/results/results.jtl
+
+# Limit to 10 requests/sec (600/min)
+jmeter -n -t jmeter/payment-load-test.jmx -JTPM=600 -l jmeter/results/results.jtl
+                                                                                                                                                 
+# Limit to 50 requests/sec (3000/min)
+jmeter -n -t jmeter/payment-load-test.jmx -JTPM=3000 -l jmeter/results/results.jtl
 ```
 
 ## Project Structure

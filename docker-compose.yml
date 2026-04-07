@@ -10,6 +10,32 @@ services:
       - "5432:5432"
     volumes:
       - demo-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U demo_user -d demo"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    container_name: demo-app
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_R2DBC_URL: r2dbc:postgresql://postgres:5432/demo
+      SPRING_R2DBC_USERNAME: demo_user
+      SPRING_R2DBC_PASSWORD: demo_pass
+      SPRING_FLYWAY_URL: jdbc:postgresql://postgres:5432/demo
+      SPRING_FLYWAY_USER: demo_user
+      SPRING_FLYWAY_PASSWORD: demo_pass
+    depends_on:
+      postgres:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
 
 volumes:
   demo-pgdata:

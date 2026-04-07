@@ -6,6 +6,10 @@ spring:
     url: r2dbc:postgresql://localhost:5432/demo
     username: demo_user
     password: demo_pass
+    pool:
+      initial-size: 5
+      max-size: 20
+      max-acquire-time: 5s
 
 # Flyway uses its own jdbc driver
   flyway:
