@@ -4,20 +4,18 @@ import hp.soft.account.dto.Account;
 import hp.soft.account.dto.AccountCode;
 import hp.soft.account.dto.AccountType;
 import hp.soft.account.service.AccountService;
-import hp.soft.ledger.repository.TransactionRepository;
 import hp.soft.ledger.service.LedgerService;
 import hp.soft.payment.dto.*;
 import hp.soft.payment.repository.PaymentRepository;
+import hp.soft.payment.service.validation.PurchaseValidator;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
-import java.util.List;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -26,8 +24,9 @@ class PaymentServiceTest {
     private final PaymentRepository paymentRepository = mock(PaymentRepository.class);
     private final AccountService accountService = mock(AccountService.class);
     private final LedgerService ledgerService = mock(LedgerService.class);
-    private final TransactionRepository transactionRepository = mock(TransactionRepository.class);
-    private final PaymentService paymentService = new PaymentService(paymentRepository, accountService, ledgerService, transactionRepository);
+    private final PurchaseValidator purchaseValidator = mock(PurchaseValidator.class);
+    private final PaymentService paymentService = new PaymentService(
+            paymentRepository, accountService, ledgerService, purchaseValidator);
 
     private final UUID customerId = UUID.randomUUID();
     private final UUID merchantId = UUID.randomUUID();
@@ -49,6 +48,7 @@ class PaymentServiceTest {
                 .id(UUID.randomUUID()).customerId(customerId).merchantId(merchantId)
                 .amount(amount).status(PaymentStatus.CREATED).createdAt(OffsetDateTime.now()).build();
 
+        when(purchaseValidator.validate(customerId, merchantId, amount)).thenReturn(Mono.empty());
         when(paymentRepository.insert(customerId, merchantId, amount)).thenReturn(Mono.just(payment));
         when(accountService.findOrCreateCustomerReceivable(customerId)).thenReturn(Mono.just(customerReceivable));
         when(accountService.findOrCreateMerchantPayable(merchantId)).thenReturn(Mono.just(merchantPayable));
@@ -60,6 +60,19 @@ class PaymentServiceTest {
                 .verifyComplete();
 
         verify(ledgerService).recordPurchase(payment.id(), amount, customerReceivable, merchantPayable, zilchCash);
+    }
+
+    @Test
+    void purchase_failsWhenValidationFails() {
+        when(purchaseValidator.validate(customerId, merchantId, amount))
+                .thenReturn(Mono.error(new IllegalArgumentException("Credit check failed")));
+
+        StepVerifier.create(paymentService.purchase(new PurchaseRequest(customerId, merchantId, amount)))
+                .expectErrorMatches(e -> e instanceof IllegalArgumentException
+                        && e.getMessage().contains("Credit check failed"))
+                .verify();
+
+        verify(paymentRepository, never()).insert(any(), any(), any());
     }
 
     @Test
@@ -108,50 +121,6 @@ class PaymentServiceTest {
         StepVerifier.create(paymentService.payOff(new PayOffRequest(paymentId, "key-1")))
                 .expectErrorMatches(e -> e instanceof IllegalStateException
                         && e.getMessage().contains("not in CREATED status"))
-                .verify();
-    }
-
-    @Test
-    void getPaymentDetail_returnsPaymentWithTransactions() {
-        UUID paymentId = UUID.randomUUID();
-        Payment payment = Payment.builder()
-                .id(paymentId).customerId(customerId).merchantId(merchantId)
-                .amount(amount).status(PaymentStatus.CREATED).createdAt(OffsetDateTime.now()).build();
-
-        List<PaymentDetail.TransactionDetail> txDetails = List.of(
-                PaymentDetail.TransactionDetail.builder()
-                        .id(UUID.randomUUID()).description("Purchase obligation").amount(amount)
-                        .createdAt(OffsetDateTime.now())
-                        .lines(List.of(
-                                PaymentDetail.LedgerLineDetail.builder()
-                                        .accountCode("CUSTOMER_RECEIVABLE").accountName("Customer Receivable")
-                                        .debit(amount).credit(null).build(),
-                                PaymentDetail.LedgerLineDetail.builder()
-                                        .accountCode("MERCHANT_PAYABLE").accountName("Merchant Payable")
-                                        .debit(null).credit(amount).build()
-                        )).build()
-        );
-
-        when(paymentRepository.findById(paymentId)).thenReturn(Mono.just(payment));
-        when(transactionRepository.findDetailsByPaymentId(paymentId)).thenReturn(Mono.just(txDetails));
-
-        StepVerifier.create(paymentService.getPaymentDetail(paymentId))
-                .assertNext(detail -> {
-                    assertEquals(paymentId, detail.id());
-                    assertEquals(1, detail.transactions().size());
-                    assertEquals(2, detail.transactions().getFirst().lines().size());
-                })
-                .verifyComplete();
-    }
-
-    @Test
-    void getPaymentDetail_failsWhenPaymentNotFound() {
-        UUID paymentId = UUID.randomUUID();
-        when(paymentRepository.findById(paymentId)).thenReturn(Mono.empty());
-
-        StepVerifier.create(paymentService.getPaymentDetail(paymentId))
-                .expectErrorMatches(e -> e instanceof IllegalArgumentException
-                        && e.getMessage().contains("Payment not found"))
                 .verify();
     }
 }

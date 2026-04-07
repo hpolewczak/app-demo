@@ -1,6 +1,7 @@
 package hp.soft.payment.api;
 
 import hp.soft.payment.dto.*;
+import hp.soft.payment.service.PaymentQueryService;
 import hp.soft.payment.service.PaymentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class PaymentController {
     private final PaymentService paymentService;
+    private final PaymentQueryService paymentQueryService;
 
     @PostMapping("/purchase")
     public Mono<Payment> purchase(@Valid @RequestBody PurchaseRequest request) {
@@ -27,6 +29,6 @@ public class PaymentController {
 
     @GetMapping("/{paymentId}")
     public Mono<PaymentDetail> getPaymentDetail(@PathVariable UUID paymentId) {
-        return paymentService.getPaymentDetail(paymentId);
+        return paymentQueryService.getPaymentDetail(paymentId);
     }
 }
