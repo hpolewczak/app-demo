@@ -19,6 +19,7 @@ import static org.jooq.impl.DSL.sum;
 @RequiredArgsConstructor
 public class LedgerLineRepository {
     private final DSLContext dsl;
+    private final LedgerLineMapper ledgerLineMapper;
 
     public Mono<Void> insert(UUID transactionId, UUID accountId, BigDecimal debit, BigDecimal credit) {
         UUID id = UUID.randomUUID();
@@ -43,14 +44,7 @@ public class LedgerLineRepository {
                         )
                         .from(ACCOUNTS)
                         .leftJoin(LEDGER_LINES).on(ACCOUNTS.ACC_ID.eq(LEDGER_LINES.LL_ACC_ID))
-                        .groupBy(ACCOUNTS.ACC_ID, ACCOUNTS.ACC_CODE, ACCOUNTS.ACC_NAME, ACCOUNTS.ACC_TYPE)
-        ).map(r -> AccountBalance.builder()
-                .code(r.get(ACCOUNTS.ACC_CODE))
-                .name(r.get(ACCOUNTS.ACC_NAME))
-                .type(r.get(ACCOUNTS.ACC_TYPE))
-                .totalDebits(r.get("total_debits", BigDecimal.class))
-                .totalCredits(r.get("total_credits", BigDecimal.class))
-                .balance(r.get("total_debits", BigDecimal.class).subtract(r.get("total_credits", BigDecimal.class)))
-                .build());
+                        .groupBy(ACCOUNTS.ACC_ID)
+        ).map(ledgerLineMapper::toAccountBalance);
     }
 }
