@@ -5,11 +5,13 @@ import hp.soft.account.dto.AccountCode;
 import hp.soft.account.dto.AccountType;
 import hp.soft.account.repository.AccountRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AccountService {
@@ -43,15 +45,19 @@ public class AccountService {
     private Mono<Account> findOrCreate(AccountCode code, AccountType type, String name,
                                        UUID customerId, UUID merchantId) {
         return accountRepository.findByCode(code, customerId, merchantId)
-                .switchIfEmpty(Mono.defer(() -> accountRepository.insert(
-                        Account.builder()
-                                .id(UUID.randomUUID())
-                                .code(code)
-                                .name(name)
-                                .type(type)
-                                .customerId(customerId)
-                                .merchantId(merchantId)
-                                .build()
-                )));
+                .doOnNext(a -> log.debug("Account found: code={}, id={}", code, a.id()))
+                .switchIfEmpty(Mono.defer(() -> {
+                    log.debug("Account not found, creating: code={}, customerId={}, merchantId={}", code, customerId, merchantId);
+                    return accountRepository.insert(
+                            Account.builder()
+                                    .id(UUID.randomUUID())
+                                    .code(code)
+                                    .name(name)
+                                    .type(type)
+                                    .customerId(customerId)
+                                    .merchantId(merchantId)
+                                    .build()
+                    );
+                }));
     }
 }

@@ -17,6 +17,7 @@ public class FraudCheckService {
         return Mono.delay(Duration.ofMillis(80))
                 .then(Mono.defer(() -> {
                     if (amount.compareTo(FRAUD_THRESHOLD) > 0) {
+                        log.warn("Fraud check failed: suspicious amount {} for customer {} merchant {}", amount, customerId, merchantId);
                         return Mono.error(new IllegalArgumentException(
                                 "Fraud check failed: suspicious amount %s for customer %s merchant %s"
                                         .formatted(amount, customerId, merchantId)));

@@ -17,6 +17,7 @@ public class CreditCheckService {
         return Mono.delay(Duration.ofMillis(50))
                 .then(Mono.defer(() -> {
                     if (amount.compareTo(CREDIT_LIMIT) > 0) {
+                        log.warn("Credit check failed: amount {} exceeds limit {} for customer {}", amount, CREDIT_LIMIT, customerId);
                         return Mono.error(new IllegalArgumentException(
                                 "Credit check failed: amount %s exceeds limit %s for customer %s"
                                         .formatted(amount, CREDIT_LIMIT, customerId)));
