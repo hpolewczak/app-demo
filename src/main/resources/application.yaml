@@ -11,6 +11,18 @@ spring:
       max-size: 20
       max-acquire-time: 5s
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
 # Flyway uses its own jdbc driver
   flyway:
     url: jdbc:postgresql://localhost:5432/demo
