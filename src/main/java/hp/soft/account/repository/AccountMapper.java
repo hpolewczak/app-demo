@@ -4,9 +4,9 @@ import hp.soft.account.dto.Account;
 import hp.soft.account.dto.AccountCode;
 import hp.soft.account.dto.AccountType;
 import hp.soft.jooq.tables.records.AccountsRecord;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
-@Service
+@Component
 public class AccountMapper {
 
     public Account toAccount(AccountsRecord r) {

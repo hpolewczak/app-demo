@@ -2,13 +2,13 @@ package hp.soft.ledger.repository;
 
 import hp.soft.ledger.dto.AccountBalance;
 import org.jooq.Record;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 
 import static hp.soft.jooq.tables.Accounts.ACCOUNTS;
 
-@Service
+@Component
 public class LedgerLineMapper {
 
     public AccountBalance toAccountBalance(Record r) {

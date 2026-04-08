@@ -2,7 +2,7 @@ package hp.soft.ledger.repository;
 
 import hp.soft.payment.dto.PaymentDetail;
 import org.jooq.Record;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
@@ -13,7 +13,7 @@ import static hp.soft.jooq.tables.Accounts.ACCOUNTS;
 import static hp.soft.jooq.tables.LedgerLines.LEDGER_LINES;
 import static hp.soft.jooq.tables.Transactions.TRANSACTIONS;
 
-@Service
+@Component
 public class TransactionMapper {
 
     public List<PaymentDetail.TransactionDetail> toTransactionDetails(List<? extends Record> rows) {
