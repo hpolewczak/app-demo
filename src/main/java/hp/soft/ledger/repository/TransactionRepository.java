@@ -30,11 +30,14 @@ public class TransactionRepository {
                         .set(TRANSACTIONS.TX_DESCRIPTION, description)
                         .set(TRANSACTIONS.TX_PM_ID, paymentId)
                         .set(TRANSACTIONS.TX_AMOUNT, amount)
-        ).thenReturn(Transaction.builder()
-                .id(id)
-                .description(description)
-                .paymentId(paymentId)
-                .amount(amount)
+                        .returningResult(TRANSACTIONS.TX_ID, TRANSACTIONS.TX_DESCRIPTION,
+                                TRANSACTIONS.TX_PM_ID, TRANSACTIONS.TX_AMOUNT, TRANSACTIONS.TX_CREATED_AT)
+        ).map(r -> Transaction.builder()
+                .id(r.get(TRANSACTIONS.TX_ID))
+                .description(r.get(TRANSACTIONS.TX_DESCRIPTION))
+                .paymentId(r.get(TRANSACTIONS.TX_PM_ID))
+                .amount(r.get(TRANSACTIONS.TX_AMOUNT))
+                .createdAt(r.get(TRANSACTIONS.TX_CREATED_AT))
                 .build());
     }
 
