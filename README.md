@@ -2,6 +2,11 @@
 
 A reactive Spring Boot application simulating Buy Now, Pay Later (BNPL) payments with double-entry bookkeeping.
 
+> **Note:** This is a demo project. Each purchase executes up to 10 writes in a single DB transaction
+> (account creation + payment + 2 transactions + 4 ledger lines), creating a connection pool bottleneck under load.
+> To scale, ledger writes could be decoupled via a lightweight **outbox pattern** (poller-based, no new infra)
+> or a production-grade **Kafka**-based event pipeline with backpressure and horizontal scaling.
+
 ## Tech Stack
 
 Java 25, Spring Boot 4.0.5, WebFlux, PostgreSQL 18 + R2DBC, jOOQ, Flyway, Testcontainers, JMeter
