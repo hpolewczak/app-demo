@@ -8,7 +8,9 @@ import hp.soft.ledger.service.LedgerService;
 import hp.soft.payment.dto.*;
 import hp.soft.payment.repository.PaymentRepository;
 import hp.soft.payment.service.validation.PurchaseValidator;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.transaction.reactive.TransactionalOperator;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
@@ -25,8 +27,9 @@ class PaymentServiceTest {
     private final AccountService accountService = mock(AccountService.class);
     private final LedgerService ledgerService = mock(LedgerService.class);
     private final PurchaseValidator purchaseValidator = mock(PurchaseValidator.class);
+    private final TransactionalOperator txOperator = mock(TransactionalOperator.class);
     private final PaymentService paymentService = new PaymentService(
-            paymentRepository, accountService, ledgerService, purchaseValidator);
+            paymentRepository, accountService, ledgerService, purchaseValidator, txOperator);
 
     private final UUID customerId = UUID.randomUUID();
     private final UUID merchantId = UUID.randomUUID();
@@ -41,6 +44,11 @@ class PaymentServiceTest {
     private final Account zilchCash = Account.builder()
             .id(UUID.randomUUID()).code(AccountCode.ZILCH_CASH).name("Zilch Cash")
             .type(AccountType.ASSET).build();
+
+    @BeforeEach
+    void setUp() {
+        when(txOperator.transactional(any(Mono.class))).thenAnswer(invocation -> invocation.getArgument(0));
+    }
 
     @Test
     void purchase_createsPaymentAndLedgerEntries() {

@@ -8,8 +8,10 @@ import hp.soft.payment.service.validation.PurchaseValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.reactive.TransactionalOperator;
 import reactor.core.publisher.Mono;
+
+import java.time.Duration;
 
 @Slf4j
 @Service
@@ -19,13 +21,23 @@ public class PaymentService {
     private final AccountService accountService;
     private final LedgerService ledgerService;
     private final PurchaseValidator purchaseValidator;
+    private final TransactionalOperator txOperator;
 
-    @Transactional
     public Mono<Payment> purchase(PurchaseRequest request) {
+        long start = System.nanoTime();
         log.info("Processing purchase: customer={}, merchant={}, amount={}",
                 request.customerId(), request.merchantId(), request.amount());
         return purchaseValidator.validate(request.customerId(), request.merchantId(), request.amount())
-                .then(Mono.defer(() -> paymentRepository.insert(request.customerId(), request.merchantId(), request.amount())))
+                .then(Mono.defer(() -> executePurchase(request)))
+                .doOnSuccess(p -> log.info("Purchase completed: paymentId={}, durationMs={}",
+                        p.id(), Duration.ofNanos(System.nanoTime() - start).toMillis()))
+                .doOnError(e -> log.error("Purchase failed: customer={}, merchant={}, amount={}, durationMs={} — {}",
+                        request.customerId(), request.merchantId(), request.amount(),
+                        Duration.ofNanos(System.nanoTime() - start).toMillis(), e.getMessage()));
+    }
+
+    private Mono<Payment> executePurchase(PurchaseRequest request) {
+        return paymentRepository.insert(request.customerId(), request.merchantId(), request.amount())
                 .flatMap(payment ->
                         Mono.zip(
                                 accountService.findOrCreateCustomerReceivable(request.customerId()),
@@ -41,21 +53,21 @@ public class PaymentService {
                                 ).thenReturn(payment)
                         )
                 )
-                .doOnSuccess(p -> log.info("Purchase completed: paymentId={}", p.id()))
-                .doOnError(e -> log.error("Purchase failed: customer={}, merchant={}, amount={} — {}",
-                        request.customerId(), request.merchantId(), request.amount(), e.getMessage()));
+                .as(txOperator::transactional);
     }
 
-    @Transactional
     public Mono<Payment> payOff(PayOffRequest request) {
+        long start = System.nanoTime();
         log.info("Processing pay-off: paymentId={}, idempotencyKey={}", request.paymentId(), request.idempotencyKey());
         return paymentRepository.findByIdForUpdate(request.paymentId())
                 .switchIfEmpty(Mono.error(new IllegalArgumentException("Payment not found: " + request.paymentId())))
                 .flatMap(this::ensureCreated)
                 .flatMap(payment -> recordRepayment(payment, request.idempotencyKey()))
-                .doOnSuccess(p -> log.info("Pay-off completed: paymentId={}", p.id()))
-                .doOnError(e -> log.error("Pay-off failed: paymentId={} — {}",
-                        request.paymentId(), e.getMessage()));
+                .as(txOperator::transactional)
+                .doOnSuccess(p -> log.info("Pay-off completed: paymentId={}, durationMs={}",
+                        p.id(), Duration.ofNanos(System.nanoTime() - start).toMillis()))
+                .doOnError(e -> log.error("Pay-off failed: paymentId={}, durationMs={} — {}",
+                        request.paymentId(), Duration.ofNanos(System.nanoTime() - start).toMillis(), e.getMessage()));
     }
 
     private Mono<Payment> ensureCreated(Payment payment) {

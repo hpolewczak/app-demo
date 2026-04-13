@@ -7,9 +7,11 @@ spring:
     username: demo_user
     password: demo_pass
     pool:
-      initial-size: 5
-      max-size: 20
+      initial-size: 50
+      max-size: 95
       max-acquire-time: 5s
+      max-idle-time: 10m
+      max-life-time: 30m
 
 management:
   endpoints:
@@ -20,6 +22,11 @@ management:
     health:
       show-details: always
   metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      percentiles:
+        http.server.requests: 0.5, 0.95, 0.99
     tags:
       application: ${spring.application.name}
 

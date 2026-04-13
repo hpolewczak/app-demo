@@ -15,6 +15,11 @@ services:
       interval: 2s
       timeout: 5s
       retries: 10
+    deploy:
+      resources:
+        limits:
+          cpus: "3.0"
+          memory: 3G
 
   app:
     build: .
@@ -34,7 +39,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "1.0"
+          cpus: "3.0"
           memory: 512M
 
 volumes:

@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.r2dbc.connection.R2dbcTransactionManager;
 import org.springframework.r2dbc.connection.TransactionAwareConnectionFactoryProxy;
 import org.springframework.transaction.ReactiveTransactionManager;
+import org.springframework.transaction.reactive.TransactionalOperator;
 
 @Configuration
 public class JooqConfig {
@@ -32,5 +33,10 @@ public class JooqConfig {
     @Primary
     public ReactiveTransactionManager reactiveTransactionManager(ConnectionFactory connectionFactory) {
         return new R2dbcTransactionManager(connectionFactory);
+    }
+
+    @Bean
+    public TransactionalOperator transactionalOperator(ReactiveTransactionManager txManager) {
+        return TransactionalOperator.create(txManager);
     }
 }
