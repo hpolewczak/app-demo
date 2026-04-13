@@ -26,6 +26,7 @@ services:
     container_name: demo-app
     ports:
       - "8080:8080"
+      - "9090:9090"
     environment:
       SPRING_R2DBC_URL: r2dbc:postgresql://postgres:5432/demo
       SPRING_R2DBC_USERNAME: demo_user
@@ -33,6 +34,13 @@ services:
       SPRING_FLYWAY_URL: jdbc:postgresql://postgres:5432/demo
       SPRING_FLYWAY_USER: demo_user
       SPRING_FLYWAY_PASSWORD: demo_pass
+      JAVA_TOOL_OPTIONS: >-
+        -Dcom.sun.management.jmxremote
+        -Dcom.sun.management.jmxremote.port=9090
+        -Dcom.sun.management.jmxremote.rmi.port=9090
+        -Dcom.sun.management.jmxremote.authenticate=false
+        -Dcom.sun.management.jmxremote.ssl=false
+        -Djava.rmi.server.hostname=localhost
     depends_on:
       postgres:
         condition: service_healthy
@@ -40,7 +48,7 @@ services:
       resources:
         limits:
           cpus: "3.0"
-          memory: 512M
+          memory: 256M
 
 volumes:
   demo-pgdata:
